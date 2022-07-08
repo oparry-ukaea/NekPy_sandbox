@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Temporary files used for env generation
+tmp_requirements.txt

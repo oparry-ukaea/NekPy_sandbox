@@ -1,0 +1,3 @@
+pip==22.1.1
+NEKPY_PATH
+numpy==1.22.4
