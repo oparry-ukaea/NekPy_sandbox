@@ -130,3 +130,6 @@ dmypy.json
 
 # Temporary files used for env generation
 tmp_requirements.txt
+
+# PDF output
+*/*.pdf
