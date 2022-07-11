@@ -59,10 +59,9 @@ graph = MeshGraph.Read(session)
 # Create ContField2D
 exp = ContField(session, graph, session.GetVariable(0))
 
-# Construct factor map, using lambda from session file.
-lamb = session.GetParameter("Lambda")
+# Construct factor map, setting lambda = 0 (Helmholtz=>Poisson)
 factors = ConstFactorMap()
-factors[ConstFactorType.FactorLambda] = lamb
+factors[ConstFactorType.FactorLambda] = 0.0
 
 # Test use of variable coefficients.
 coeffs = VarCoeffMap()
@@ -74,7 +73,7 @@ x, y = exp.GetCoords()
 # Uncomment to generate 2D scatters
 #plot_domain(x,y)
 sol = np.sin(np.pi * x) * np.sin(np.pi * y)
-fx = -(lamb + 2*np.pi*np.pi) * sol
+fx = -2*np.pi*np.pi * sol
 
 # Solve Helmholtz equation.
 helm_sol = exp.BwdTrans(exp.HelmSolve(fx, factors, coeffs))

@@ -239,9 +239,7 @@
 
     <CONDITIONS>
 
-        <PARAMETERS>
-            <P> Lambda    = 1 </P>
-        </PARAMETERS>
+        <PARAMETERS />
 
         <VARIABLES>
             <V ID="0"> u </V>
@@ -330,6 +328,8 @@
         <FUNCTION NAME="ExactSolution">
             <E VAR="u" VALUE="sin(PI*x)*sin(PI*y)" />
         </FUNCTION>
+
+        <SOL
 
     </CONDITIONS>
 
