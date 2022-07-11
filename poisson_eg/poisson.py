@@ -1,5 +1,8 @@
 """Adapted from Nektar demo at
    https://gitlab.nektar.info/nektar/nektar/-/tree/master/library/Demos/Python/MultiRegions/Helmholtz2D.py
+
+   N.B. The rhs (source) term returned by choose_sol_and_rhs() has to match the boundary conditions specified in the session file,
+   so this script uses one parameter, 'src_type' to choose both 
 """
 
 from NekPy.LibUtilities import SessionReader, ReduceOperator
@@ -17,19 +20,31 @@ comm = None
 
 #======================================== Helper functions ========================================
 def get_rank():
-    """ Get MPI rank
-        If communicator hasn't been initialised yet, assume rank 0
+    """ Get MPI rank.
+        If communicator hasn't been initialised yet, raise RuntimeError
     """
-    return 0 if comm is None else comm.GetRank()
+    if comm is None:
+        raise RuntimeError("MPI communicator not set.")
+    return comm.GetRank()
 
 def print_master(str):
-    """Print on rank 0 only"""
+    """Print to stdout on rank 0 only"""
     if get_rank() == 0:
         print(str)
 
-def plot_domain(x, y):
-    fout = os.path.join(os.path.dirname(__file__),f"rank{get_rank()}_domain.pdf") 
-    plt.scatter(x,y)
+def write_pdf_for_rank(x, y, z=None, fname_suffix="",scale_z=False):
+    """Plot y vs x scatter, coloured by z if supplied
+       Save to 'rank[rank][fname_suffix].pdf'
+    """
+    fout = os.path.join(os.path.dirname(__file__),f"rank{get_rank()}{fname_suffix}.pdf") 
+    plt.clf()
+    if z is None:
+        plt.scatter(x,y)
+    else:
+        # Use z for color, scaling if requested
+        color = (z-np.min(z))/(np.max(z)-np.min(z)) if scale_z else z
+        plt.scatter(x,y,c=color)
+        plt.colorbar()
     plt.savefig(fout)
 #==================================================================================================
 
@@ -37,6 +52,7 @@ def plot_domain(x, y):
 default_inputs_dir   = os.path.join(os.path.dirname(__file__),"inputs")
 default_session_file = os.path.join(default_inputs_dir,"poisson_config.xml")
 
+# Construct args to pass to session reader
 if len(sys.argv) == 2:
     args = sys.argv
 elif len(sys.argv) == 1:
@@ -46,12 +62,14 @@ else:
     print_master(f"Usage2: python poisson.py    (Uses {default_session_file})")
     exit(1)
 
-# Init session
+# Init session (including MPI)
 session = SessionReader.CreateInstance(args)
 # Get MPI communicator (and set globally)
 comm = session.GetComm()
-# Report session file
+
+# Report session filepath
 print_master(f"Using session file at {args[1]}")
+print_master(f"Session file was {session.GetSessionName()}.xml")
 
 # Init mesh
 graph = MeshGraph.Read(session)
@@ -70,21 +88,28 @@ coeffs[VarCoeffType.VarCoeffD11] = np.ones(exp.GetNpoints())
 
 # Construct right hand side forcing term.
 x, y = exp.GetCoords()
-# Uncomment to generate 2D scatters
-#plot_domain(x,y)
-sol = np.sin(np.pi * x) * np.sin(np.pi * y)
-fx = -2*np.pi*np.pi * sol
 
-# Solve Helmholtz equation.
-helm_sol = exp.BwdTrans(exp.HelmSolve(fx, factors, coeffs))
-L2_error = exp.L2(helm_sol, sol)
-Linf_error = exp.Linf(helm_sol, sol)
-Linf_error_comm = comm.AllReduce(np.max(np.abs(helm_sol - sol)), ReduceOperator.ReduceMax)
+# Uncomment to generate 2D scatters of the domain (one per MPI rank)
+#write_pdf_for_rank(x,y,fname_suffix="_domain")
 
-# Print out some stats for debugging.
-print_master("L 2 error (variable nek)     : %.6e" % L2_error)
-print_master("L inf error (variable nek)   : %.6e" % Linf_error)
-print_master("L inf error (variable nekpy) : %.6e" % Linf_error_comm)
+exact_sol = np.sin(np.pi * x) * np.sin(np.pi * y)
+fx = -2 * np.pi*np.pi * exact_sol
 
-# Clean up!
+# Solve and transform back from expansion space to physical space
+calc_sol = exp.BwdTrans(exp.HelmSolve(rhs, factors, coeffs))
+
+# Output L2 error
+L2_error_local = exp.L2(calc_sol, exact_sol)
+L2_error = comm.AllReduce(L2_error_local, ReduceOperator.ReduceSum) / comm.GetSize()
+print_master("L 2 error : %.6e" % L2_error)
+
+# Output max error (Chebyshev distance)
+Linf_error_local = exp.Linf(calc_sol, exact_sol)
+Linf_error = comm.AllReduce(Linf_error_local, ReduceOperator.ReduceMax)
+print_master("L inf error : %.6e" % Linf_error)
+
+# Uncomment to generate 2D scatters of (re-scaled) solution
+#write_pdf_for_rank(x,y,calc_sol,fname_suffix="_sol",scale_z=True)
+
+# Clean up MPI
 session.Finalise()
