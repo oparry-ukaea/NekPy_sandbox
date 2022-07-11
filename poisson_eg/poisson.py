@@ -19,6 +19,19 @@ import sys
 comm = None
 
 #======================================== Helper functions ========================================
+def choose_sol_and_rhs(src_type,session):
+    if src_type == "exp": 
+        a = session.GetParameter("a")
+        b = session.GetParameter("b")
+        exact_sol = np.exp(-(a*x**2 + b*y**2) / 2.0)
+        rhs = ((a*x)**2 - a + (b*y)**2 - b) * exact_sol
+    elif src_type == "trig":
+        exact_sol = np.sin(np.pi * x) * np.sin(np.pi * y)
+        rhs = -2 * np.pi*np.pi * exact_sol
+    else:
+        raise ValueError(f"No solution, rhs defined for src type {src_type}")
+    return exact_sol,rhs
+
 def get_rank():
     """ Get MPI rank.
         If communicator hasn't been initialised yet, raise RuntimeError
@@ -48,19 +61,24 @@ def write_pdf_for_rank(x, y, z=None, fname_suffix="",scale_z=False):
     plt.savefig(fout)
 #==================================================================================================
 
-# Default input files
-default_inputs_dir   = os.path.join(os.path.dirname(__file__),"inputs")
-default_session_file = os.path.join(default_inputs_dir,"poisson_config.xml")
+# Define possible src types and corresponding session file paths
+src_types = ["exp", "trig"]
+inputs_dir = os.path.join(os.path.dirname(__file__),"inputs")
+session_file_paths = {src_type: os.path.join(inputs_dir,f"poisson_{src_type}.xml") for src_type in src_types}
+
+# Parse args
+src_type = "not_set"
+if len(sys.argv) == 2:
+    src_type = sys.argv[1]
+elif len(sys.argv) == 1:
+    src_type = src_types[0]
+if not src_type in src_types:
+    print("Usage: python poisson.py <src_type>")
+    print(f" where src_type is one of [{','.join(src_types)}] and defaults to {src_types[0]} ")
+    exit(1)
 
 # Construct args to pass to session reader
-if len(sys.argv) == 2:
-    args = sys.argv
-elif len(sys.argv) == 1:
-    args = [sys.argv[0], default_session_file]
-else:
-    print_master("Usage1: python poisson.py a_session_file.xml")
-    print_master(f"Usage2: python poisson.py    (Uses {default_session_file})")
-    exit(1)
+args = [sys.argv[0], session_file_paths[src_type]]
 
 # Init session (including MPI)
 session = SessionReader.CreateInstance(args)
@@ -68,7 +86,6 @@ session = SessionReader.CreateInstance(args)
 comm = session.GetComm()
 
 # Report session filepath
-print_master(f"Using session file at {args[1]}")
 print_master(f"Session file was {session.GetSessionName()}.xml")
 
 # Init mesh
@@ -92,8 +109,8 @@ x, y = exp.GetCoords()
 # Uncomment to generate 2D scatters of the domain (one per MPI rank)
 #write_pdf_for_rank(x,y,fname_suffix="_domain")
 
-exact_sol = np.sin(np.pi * x) * np.sin(np.pi * y)
-fx = -2 * np.pi*np.pi * exact_sol
+# Choose exact solution and right-hand-side of Poisson eqn
+exact_sol,rhs = choose_sol_and_rhs(src_type,session)
 
 # Solve and transform back from expansion space to physical space
 calc_sol = exp.BwdTrans(exp.HelmSolve(rhs, factors, coeffs))
@@ -108,8 +125,9 @@ Linf_error_local = exp.Linf(calc_sol, exact_sol)
 Linf_error = comm.AllReduce(Linf_error_local, ReduceOperator.ReduceMax)
 print_master("L inf error : %.6e" % Linf_error)
 
-# Uncomment to generate 2D scatters of (re-scaled) solution
-#write_pdf_for_rank(x,y,calc_sol,fname_suffix="_sol",scale_z=True)
+# Uncomment to generate 2D scatters of calculated, exact solutions (one per MPI rank)
+#write_pdf_for_rank(x,y,calc_sol,fname_suffix="_calc_sol")
+#write_pdf_for_rank(x,y,exact_sol,fname_suffix="_exact_sol")
 
 # Clean up MPI
 session.Finalise()
