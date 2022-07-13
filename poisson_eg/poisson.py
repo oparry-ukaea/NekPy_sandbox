@@ -98,7 +98,8 @@ exp = ContField(session, graph, session.GetVariable(0))
 factors = ConstFactorMap()
 factors[ConstFactorType.FactorLambda] = 0.0
 
-# Test use of variable coefficients.
+# Set coefficients such that the mass matrix ('M' in Equation 2 of the README) is the identity matrix
+# N.B. In our case M's prefactor, lambda, is zero, so this is superfluous; it's left in for illustrative purposes only. 
 coeffs = VarCoeffMap()
 coeffs[VarCoeffType.VarCoeffD00] = np.ones(exp.GetNpoints())
 coeffs[VarCoeffType.VarCoeffD11] = np.ones(exp.GetNpoints())
