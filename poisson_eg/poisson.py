@@ -19,7 +19,7 @@ import sys
 comm = None
 
 #======================================== Helper functions ========================================
-def choose_sol_and_rhs(src_type,session):
+def choose_sol_and_rhs(src_type,session,x,y):
     if src_type == "exp": 
         a = session.GetParameter("a")
         b = session.GetParameter("b")
@@ -104,14 +104,14 @@ coeffs = VarCoeffMap()
 coeffs[VarCoeffType.VarCoeffD00] = np.ones(exp.GetNpoints())
 coeffs[VarCoeffType.VarCoeffD11] = np.ones(exp.GetNpoints())
 
-# Construct right hand side forcing term.
+# Get physical space coords from expansion obj
 x, y = exp.GetCoords()
 
 # Uncomment to generate 2D scatters of the domain (one per MPI rank)
 #write_pdf_for_rank(x,y,fname_suffix="_domain")
 
 # Choose exact solution and right-hand-side of Poisson eqn
-exact_sol,rhs = choose_sol_and_rhs(src_type,session)
+exact_sol,rhs = choose_sol_and_rhs(src_type,session,x,y)
 
 # Solve and transform back from expansion space to physical space
 calc_sol = exp.BwdTrans(exp.HelmSolve(rhs, factors, coeffs))
