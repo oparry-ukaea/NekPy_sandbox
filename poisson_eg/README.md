@@ -4,15 +4,11 @@ Example of running a Poisson solver via NekPy, based on library\Demos\Python\Mul
 ---
 
 The `Helmsolve` function solves the (2D, in this case) Helmholtz equation:
-$$
-\nabla^2u(\boldsymbol{x})-\lambda u(\boldsymbol{x}) = f(\boldsymbol{x})    \rm{~~~~\{Equation~1\}}
-$$
+$$\nabla^2u(\boldsymbol{x})-\lambda u(\boldsymbol{x}) = f(\boldsymbol{x})    \rm{~~~~\{Equation~1\}}$$
 
 
 Applying a $C^0=$ continuous Galerkin discretisation, this equation leads to the following linear system:
-$$
-\left(\boldsymbol{L}+\lambda\boldsymbol{M}\right)\boldsymbol{\hat{u}}_g=\boldsymbol{\hat{f}}    \rm{~~~~\{Equation~2\}}
-$$
+$$\left(\boldsymbol{L}+\lambda\boldsymbol{M}\right)\boldsymbol{\hat{u}}_g=\boldsymbol{\hat{f}}    \rm{~~~~\{Equation~2\}}$$
 
 where $\boldsymbol{L}$ and $\boldsymbol{M}$ are the Laplacian and mass matrices respectively.
 
