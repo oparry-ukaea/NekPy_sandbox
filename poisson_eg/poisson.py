@@ -66,6 +66,10 @@ src_types = ["exp", "trig"]
 inputs_dir = os.path.join(os.path.dirname(__file__),"inputs")
 session_file_paths = {src_type: os.path.join(inputs_dir,f"poisson_{src_type}.xml") for src_type in src_types}
 
+# Toggle plot output
+plot_domain = False
+plot_solution = False
+
 # Parse args
 src_type = "not_set"
 if len(sys.argv) == 2:
@@ -107,8 +111,9 @@ coeffs[VarCoeffType.VarCoeffD11] = np.ones(exp.GetNpoints())
 # Get physical space coords from expansion obj
 x, y = exp.GetCoords()
 
-# Uncomment to generate 2D scatters of the domain (one per MPI rank)
-#write_pdf_for_rank(x,y,fname_suffix="_domain")
+if plot_domain:
+    # Generate 2D scatters of the domain (one per MPI rank)
+    write_pdf_for_rank(x,y,fname_suffix="_domain")
 
 # Choose exact solution and right-hand-side of Poisson eqn
 exact_sol,rhs = choose_sol_and_rhs(src_type,session,x,y)
@@ -126,9 +131,10 @@ Linf_error_local = exp.Linf(calc_sol, exact_sol)
 Linf_error = comm.AllReduce(Linf_error_local, ReduceOperator.ReduceMax)
 print_master("L inf error : %.6e" % Linf_error)
 
-# Uncomment to generate 2D scatters of calculated, exact solutions (one per MPI rank)
-#write_pdf_for_rank(x,y,calc_sol,fname_suffix="_calc_sol")
-#write_pdf_for_rank(x,y,exact_sol,fname_suffix="_exact_sol")
+if plot_solution:
+    # Generate 2D scatters of calculated, exact solutions (one per MPI rank)
+    write_pdf_for_rank(x,y,calc_sol,fname_suffix="_calc_sol")
+    write_pdf_for_rank(x,y,exact_sol,fname_suffix="_exact_sol")
 
 # Clean up MPI
 session.Finalise()
