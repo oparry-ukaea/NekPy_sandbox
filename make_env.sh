@@ -25,7 +25,8 @@ fi
 
 # Set the path to NekPy in a temporary requirements file
 tmp_requirements="tmp_requirements.txt"
-sed "s|NEKPY_PATH|$nektar_dir|" < requirements.txt > "$tmp_requirements"
+ESCAPED_REPLACE=$(printf '%s\n' "$nektar_dir" | sed -e 's/[\/&]/\\&/g')
+sed -e "s/NEKPY_PATH/$ESCAPED_REPLACE/g" < requirements.txt > "$tmp_requirements"
 
 # Generate and activate the venv
 python3 -m venv "$env_dir"
@@ -41,3 +42,4 @@ if [ -f "$tmp_requirements" ]; then
 fi
 
 printf "Activate the environment with\n   . $env_dir/bin/activate\n"
+printf "If different to the version installed, you may need to up/downgrade numpy to the version that nektar built against\n"
