@@ -33,3 +33,4 @@ pip install -r "requirements.txt"
 pip install "$nektar_dir"
 
 printf "Activate the environment with\n   . $env_dir/bin/activate\n"
+printf "If different to the version installed, you may need to up/downgrade numpy to the version that nektar built against\n"
