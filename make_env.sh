@@ -23,21 +23,14 @@ if [ -d "$env_dir" ]; then
     \rm -rf "$env_dir"; 
 fi
 
-# Set the path to NekPy in a temporary requirements file
-tmp_requirements="tmp_requirements.txt"
-sed "s|NEKPY_PATH|$nektar_dir|" < requirements.txt > "$tmp_requirements"
-
 # Generate and activate the venv
 python3 -m venv "$env_dir"
 . "$env_dir/bin/activate"
 pip install wheel
 
-# Install packages
-pip install -r $tmp_requirements
-
-# Remove the temporary requirements file
-if [ -f "$tmp_requirements" ]; then
-    \rm "$tmp_requirements"
-fi
+# Install requirements, including NekPy
+pip install -r "requirements.txt"
+pip install "$nektar_dir"
 
 printf "Activate the environment with\n   . $env_dir/bin/activate\n"
+printf "If different to the version installed, you may need to up/downgrade numpy to the version that nektar built against\n"
